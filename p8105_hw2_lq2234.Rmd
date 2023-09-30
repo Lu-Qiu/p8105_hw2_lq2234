@@ -7,6 +7,7 @@ output: github_document
 
 ```{r, echo=TRUE, message=FALSE}
 library(tidyverse)
+library(readxl)
 ```
 
 ### Problem 1
@@ -14,7 +15,7 @@ First, clean the data in pols-month.csv.
 
 ```{r}
 pols_month = 
-  read_csv("./data/pols-month.csv") |>
+  read_csv('./data/pols-month.csv') |>
   janitor::clean_names() |>
   separate(mon, into = c('year', 'month', 'day'), sep = '-') |>
   mutate(
@@ -49,7 +50,7 @@ Second, clean the data in snp.csv using a similar process to the above. For cons
 
 ```{r}
 snp_df = 
-  read_csv("./data/snp.csv") |>
+  read_csv('./data/snp.csv') |>
   janitor::clean_names() |>
   mutate(
     date = as.Date(date, format = '%m/%d/%y')
@@ -88,7 +89,7 @@ Third, tidy the unemployment data so that it can be merged with the previous dat
 
 ```{r}
 unemployment_df = 
-  read_csv("./data/unemployment.csv") |>
+  read_csv('./data/unemployment.csv') |>
   janitor::clean_names() |>
   pivot_longer(
     jan:dec,
@@ -130,7 +131,72 @@ Write a short paragraph about these datasets. Explain briefly what each dataset 
 
 ### Problem 2
 
+Read and clean the Mr. Trash Wheel sheet.
+
+* specify the sheet in the Excel file and to omit non-data entries (rows with notes / figures; columns containing notes) using arguments in read_excel
+* use reasonable variable names
+* omit rows that do not include dumpster-specific data
+
+```{r}
+mr_wheel = 
+  read_excel('./data/202207 Trash Wheel Collection Data.xlsx', sheet = 1, range = 'A2:N549') |>
+  janitor ::clean_names() |>
+  mutate(year = as.numeric(year))
+```
+
+The data include a column for the (approximate) number of homes powered. This calculation is described in the Homes powered note, but not applied to every row in the dataset. Update the data to include a new homes_powered variable based on this calculation.
+
+```{r}
+mr_wheel = mutate(mr_wheel, homes_powered = weight_tons*500/30)
+```
+
+Use a similar process to import, clean, and organize the data for Professor Trash Wheel and Gwynnda, and combine these with the Mr. Trash Wheel dataset to produce a single tidy dataset. To keep track of which Trash Wheel is which, you may need to add an additional variable to all datasets before combining.
+
+```{r}
+professor_wheel = 
+  read_excel('./data/202207 Trash Wheel Collection Data.xlsx', sheet = 2, range = 'A2:M96') |>
+  janitor ::clean_names() |>
+  mutate(homes_powered = weight_tons*500/30) |>
+  mutate(type = 'professor trash wheel')
+
+gwynnda_wheel = 
+  read_excel('./data/202207 Trash Wheel Collection Data.xlsx', sheet = 4, range = 'A2:K108') |>
+  janitor ::clean_names() |>
+  mutate(homes_powered = weight_tons*500/30) |>
+  mutate(type = 'gwynnda trash wheel')
+
+mr_wheel = mutate(mr_wheel, type = 'mr trash wheel')
+
+two_wheel = full_join(mr_wheel, professor_wheel)
+all_wheel = full_join(two_wheel, gwynnda_wheel)
+
+all_wheel = relocate(all_wheel, plastic_bags, .before = homes_powered)
+```
+Write a paragraph about these data; you are encouraged to use inline R. Be sure to note the number of observations in the resulting dataset, and give examples of key variables. For available data, what was the total weight of trash collected by Professor Trash Wheel? What was the total number of cigarette butts collected by Gwynnda in July of 2021?  
+
+* The number of observations in `mr_wheel` dataset is `r nrow(mr_wheel)`. The names of key variables are: `r names(mr_wheel)`.
+* The number of observations in `professor_wheel` dataset is `r nrow(professor_wheel)`. The names of key variables are: `r names(professor_wheel)`.
+* The number of observations in `gwynnda_wheel` dataset is `r nrow(gwynnda_wheel)`. The names of key variables are: `r names(gwynnda_wheel)`.
+* The total weight of trash collected by Professor Trash Wheel is `r sum(professor_wheel$weight_tons)` tons. The total number of cigarette butts collected by Gwynnda in July of 2021 is `r sum((filter(gwynnda_wheel, year == 2021, month == 'July'))$cigarette_butts)`.
+
 
 ### Problem 3
+Import, clean, and tidy the dataset of baseline demographics. Ensure that sex and APOE4 carrier status are appropriate encoded (i.e. not numeric), and remove any participants who do not meet the stated inclusion criteria (i.e. no MCI at baseline). 
+
+```{r}
+baseline_df = 
+  read_csv('./data/MCI_baseline.csv', skip = 1) |>
+  janitor::clean_names() |>
+  mutate(sex = as.factor(sex)) |>
+  mutate(apoe4 = as.factor(apoe4)) |>
+  filter(age_at_onset > current_age | age_at_onset == '.')
+```
+
+Discuss important steps in the import process and relevant features of the dataset. How many participants were recruited, and of these how many develop MCI? What is the average baseline age? What proportion of women in the study are APOE4 carriers?  
+
+* Important steps include: skipping the first row, changing data type of 'sex' and 'apoe4', removing rows using `filter`.
+* Relevant features of the dataset: `r nrow(baseline_df)` participants were recruited, and of these `r sum(baseline_df$age_at_onset != '.')` developed MCI. The average baseline age is `r mean(baseline_df$current_age)`. A proportion of `r (sum(baseline_df$sex == 0 & baseline_df$apoe4 ==1)/nrow(baseline_df))*100` % of women in the study are APOE4 carriers.
+
+
 
 
