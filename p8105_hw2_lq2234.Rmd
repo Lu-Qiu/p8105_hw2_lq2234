@@ -5,7 +5,11 @@ date: "2023-09-27"
 output: github_document
 ---
 
-```{r, echo=TRUE, message=FALSE}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r}
 library(tidyverse)
 library(readxl)
 ```
@@ -85,6 +89,22 @@ snp_df =
   relocate(year, month)
 ```
 
+
+```{r}
+month_df = 
+  tibble(
+    month_num = 1:12,
+    month_abb = month.abb,
+    month = month.name
+  )
+snp = 
+  read_csv("./data/snp.csv") |>
+  separate(date, into = c("month", "day", "year"), convert = TRUE) |>
+  arrange(year, month) |>
+  mutate(month = month.name[month]) |>
+  select(year, month, close) 
+```
+
 Third, tidy the unemployment data so that it can be merged with the previous datasets. This process will involve switching from “wide” to “long” format; ensuring that key variables have the same name; and ensuring that key variables take the same values.
 
 ```{r}
@@ -116,17 +136,16 @@ unemployment_df =
 ```
 Join the datasets by merging snp into pols, and merging unemployment into the result.
 ```{r}
-middle_df = 
-  left_join(pols_month, snp_df, by = c('year','month'))
-final_df = 
-  left_join(middle_df, unemployment_df, by = c('year','month'))
+data_538 = 
+  left_join(pols_month, snp_df, by = c('year','month')) |>
+  left_join(unemployment_df, by = c('year','month'))
 ```
 Write a short paragraph about these datasets. Explain briefly what each dataset contained, and describe the resulting dataset (e.g. give the dimension, range of years, and names of key variables).  
 
-* The `pols_month` dataset has `r nrow(pols_month)` rows and `r ncol(pols_month)` columns. The range of years is (`r range(pols_month$year)`). The names of key variables are: `r names(pols_month)`.
-* The `snp_df` dataset has `r nrow(snp_df)` rows and `r ncol(snp_df)` columns. The range of years is (`r range(snp_df$year)`). The names of key variables are: `r names(snp_df)`.
-* The `unemployment_df` dataset has `r nrow(unemployment_df)` rows and `r ncol(unemployment_df)` columns. The range of years is (`r range(unemployment_df$year)`). The names of key variables are: `r names(unemployment_df)`.
-* The resulting dataset `final_df` has `r nrow(final_df)` rows and `r ncol(final_df)` columns. The range of years is (`r range(final_df$year)`). The names of key variables are: `r names(final_df)`.
+* The `pols_month` dataset has `r nrow(pols_month)` observations and `r ncol(pols_month)` variables and tells us about the party affiliation distribution (democrat or republican) for governors and senators for a given year from years `r range(pols_month$year)[1]` to `r range(pols_month$year)[2]`. It also tells us whether the sitting president was a democrat or republican. The names of key variables are: `r names(pols_month)`.
+* The `snp_df` dataset has `r nrow(snp_df)` observations and `r ncol(snp_df)` variables, ranging from years `r range(snp_df$year)[1]` to `r range(snp_df$year)[2]`. The names of key variables are: `r names(snp_df)`.
+* The `unemployment_df` dataset has `r nrow(unemployment_df)` observations and `r ncol(unemployment_df)` variables, ranging from years `r range(unemployment_df$year)[1]` to `r range(unemployment_df$year)[2]`. The names of key variables are: `r names(unemployment_df)`.
+* In Januarys in or after 1975 in which a democrat was president, the **average unemployment rate was `r filter(data_538, month == "January", year >= 1975, president == "dem") |> pull(unemployment_percentage) |> mean() |> round(2)`**.  The average unemployment rate over the same time period in which a republican was president was `r filter(data_538, month == "January", year >= 1975, president == "gop") |> pull(unemployment_percentage) |> mean() |> round(2)`.
 
 
 ### Problem 2
@@ -167,8 +186,9 @@ gwynnda_wheel =
 
 mr_wheel = mutate(mr_wheel, type = 'mr trash wheel')
 
-two_wheel = full_join(mr_wheel, professor_wheel)
-all_wheel = full_join(two_wheel, gwynnda_wheel)
+all_wheel = 
+  full_join(mr_wheel, professor_wheel) |> 
+  full_join(gwynnda_wheel)
 
 all_wheel = relocate(all_wheel, plastic_bags, .before = homes_powered)
 ```
@@ -195,8 +215,41 @@ baseline_df =
 Discuss important steps in the import process and relevant features of the dataset. How many participants were recruited, and of these how many develop MCI? What is the average baseline age? What proportion of women in the study are APOE4 carriers?  
 
 * Important steps include: skipping the first row, changing data type of 'sex' and 'apoe4', removing rows using `filter`.
-* Relevant features of the dataset: `r nrow(baseline_df)` participants were recruited, and of these `r sum(baseline_df$age_at_onset != '.')` developed MCI. The average baseline age is `r mean(baseline_df$current_age)`. A proportion of `r (sum(baseline_df$sex == 0 & baseline_df$apoe4 ==1)/nrow(baseline_df))*100` % of women in the study are APOE4 carriers.
+* Relevant features of the dataset: `r nrow(baseline_df)` participants were recruited, and of these `r sum(baseline_df$age_at_onset != '.')` developed MCI. The average baseline age is `r mean(baseline_df$current_age) |> round(2)`. A proportion of `r ((sum(baseline_df$sex == 0 & baseline_df$apoe4 ==1)/nrow(baseline_df))*100) |> round(2)` % of women in the study are APOE4 carriers.
+
+Similarly, import, clean, and tidy the dataset of longitudinally observed biomarker values; comment on the steps on the import process and the features of the dataset.
+
+```{r}
+amyloid_df = 
+  read_csv('./data/mci_amyloid.csv', skip = 1) |>
+  janitor::clean_names() |>
+  rename(id = study_id) |>
+  mutate_all(as.numeric)
+```
+
+Steps on the import process and the features of the dataset.
+
+* The dataset `amyloid_df` is imported without the first row using arguments in `read_csv`. Then, the column name 'study_id' is changed to 'id' to match with the `baseline_df` dataset. The data type of all values in this dataset is converted to numeric uisng `mutate_all`. Please note that in this step, all 'Na' values in the original dataset are converted to `NA` due to coercion.
+* The dateset `amyloid_df` has `r nrow(amyloid_df)` observations and `r ncol(amyloid_df)` variables. The names of variables are: `r names(amyloid_df)`.
 
 
+Check whether some participants appear in only the baseline or amyloid datasets, and comment on your findings. 
 
+* A total of `r length(setdiff(baseline_df$id, amyloid_df$id))` participants appear in only the baseline dataset, and a total of `r length(setdiff(amyloid_df$id, baseline_df$id))` participants appear in only the amyloid dataset. It suggests that there are unique 'id' values in each dataset that are not shared between the two datasets.
+
+Combine the demographic and biomarker datasets so that only participants who appear in both datasets are retained.
+
+```{r}
+combined_df <- inner_join(baseline_df, amyloid_df, by = "id")
+```
+
+Briefly describe the resulting dataset.
+
+* The resulting dataset has `r nrow(amyloid_df)` observations and `r ncol(amyloid_df)` variables. 
+
+Export the result as a CSV to the data directory.
+
+```{r}
+write.csv(combined_df, './data/combined_result.csv')
+```
 
