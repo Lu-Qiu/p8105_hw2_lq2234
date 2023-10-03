@@ -142,9 +142,9 @@ data_538 =
 ```
 Write a short paragraph about these datasets. Explain briefly what each dataset contained, and describe the resulting dataset (e.g. give the dimension, range of years, and names of key variables).  
 
-* The `pols_month` dataset has `r nrow(pols_month)` observations and `r ncol(pols_month)` variables and tells us about the party affiliation distribution (democrat or republican) for governors and senators for a given year from years `r range(pols_month$year)[1]` to `r range(pols_month$year)[2]`. It also tells us whether the sitting president was a democrat or republican. The names of key variables are: `r names(pols_month)`.
-* The `snp_df` dataset has `r nrow(snp_df)` observations and `r ncol(snp_df)` variables, ranging from years `r range(snp_df$year)[1]` to `r range(snp_df$year)[2]`. The names of key variables are: `r names(snp_df)`.
-* The `unemployment_df` dataset has `r nrow(unemployment_df)` observations and `r ncol(unemployment_df)` variables, ranging from years `r range(unemployment_df$year)[1]` to `r range(unemployment_df$year)[2]`. The names of key variables are: `r names(unemployment_df)`.
+* The `pols_month` dataset has `r nrow(pols_month)` observations and `r ncol(pols_month)` variables and tells us about the party affiliation distribution (democrat or republican) for governors and senators for a given year from years `r pols_month |> pull(year) |> min()` to `r pols_month |> pull(year) |> max()`. It also tells us whether the sitting president was a democrat or republican. The names of key variables are: `r names(pols_month)`.
+* The `snp_df` dataset has `r nrow(snp_df)` observations and `r ncol(snp_df)` variables, ranging from years `r snp_df |> pull(year) |> min()` to `r snp_df |> pull(year) |> max()`. The names of key variables are: `r names(snp_df)`.
+* The `unemployment_df` dataset has `r nrow(unemployment_df)` observations and `r ncol(unemployment_df)` variables, ranging from years `r unemployment_df |> pull(year) |> min()` to `r unemployment_df |> pull(year) |> max()`. The names of key variables are: `r names(unemployment_df)`.
 * In Januarys in or after 1975 in which a democrat was president, the **average unemployment rate was `r filter(data_538, month == "January", year >= 1975, president == "dem") |> pull(unemployment_percentage) |> mean() |> round(2)`**.  The average unemployment rate over the same time period in which a republican was president was `r filter(data_538, month == "January", year >= 1975, president == "gop") |> pull(unemployment_percentage) |> mean() |> round(2)`.
 
 
@@ -158,7 +158,7 @@ Read and clean the Mr. Trash Wheel sheet.
 
 ```{r}
 mr_wheel = 
-  read_excel('./data/202207 Trash Wheel Collection Data.xlsx', sheet = 1, range = 'A2:N549') |>
+  read_excel('./data/202309 Trash Wheel Collection Data.xlsx', sheet = 1, range = 'A2:N586') |>
   janitor ::clean_names() |>
   mutate(year = as.numeric(year))
 ```
@@ -173,13 +173,13 @@ Use a similar process to import, clean, and organize the data for Professor Tras
 
 ```{r}
 professor_wheel = 
-  read_excel('./data/202207 Trash Wheel Collection Data.xlsx', sheet = 2, range = 'A2:M96') |>
+  read_excel('./data/202309 Trash Wheel Collection Data.xlsx', sheet = 2, range = 'A2:M108') |>
   janitor ::clean_names() |>
   mutate(homes_powered = weight_tons*500/30) |>
   mutate(type = 'professor trash wheel')
 
 gwynnda_wheel = 
-  read_excel('./data/202207 Trash Wheel Collection Data.xlsx', sheet = 4, range = 'A2:K108') |>
+  read_excel('./data/202309 Trash Wheel Collection Data.xlsx', sheet = 4, range = 'A2:L157') |>
   janitor ::clean_names() |>
   mutate(homes_powered = weight_tons*500/30) |>
   mutate(type = 'gwynnda trash wheel')
@@ -190,14 +190,13 @@ all_wheel =
   full_join(mr_wheel, professor_wheel) |> 
   full_join(gwynnda_wheel)
 
-all_wheel = relocate(all_wheel, plastic_bags, .before = homes_powered)
 ```
 Write a paragraph about these data; you are encouraged to use inline R. Be sure to note the number of observations in the resulting dataset, and give examples of key variables. For available data, what was the total weight of trash collected by Professor Trash Wheel? What was the total number of cigarette butts collected by Gwynnda in July of 2021?  
 
 * The number of observations in `mr_wheel` dataset is `r nrow(mr_wheel)`. The names of key variables are: `r names(mr_wheel)`.
 * The number of observations in `professor_wheel` dataset is `r nrow(professor_wheel)`. The names of key variables are: `r names(professor_wheel)`.
 * The number of observations in `gwynnda_wheel` dataset is `r nrow(gwynnda_wheel)`. The names of key variables are: `r names(gwynnda_wheel)`.
-* The total weight of trash collected by Professor Trash Wheel is `r sum(professor_wheel$weight_tons)` tons. The total number of cigarette butts collected by Gwynnda in July of 2021 is `r sum((filter(gwynnda_wheel, year == 2021, month == 'July'))$cigarette_butts)`.
+* The total weight of trash collected by Professor Trash Wheel is `r sum(pull(professor_wheel, weight_tons))` tons. The total number of cigarette butts collected by Gwynnda in July of 2021 is `r gwynnda_wheel |> filter(year == 2021, month == 'July') |> pull(cigarette_butts) |> sum()`.
 
 
 ### Problem 3
@@ -215,7 +214,7 @@ baseline_df =
 Discuss important steps in the import process and relevant features of the dataset. How many participants were recruited, and of these how many develop MCI? What is the average baseline age? What proportion of women in the study are APOE4 carriers?  
 
 * Important steps include: skipping the first row, changing data type of 'sex' and 'apoe4', removing rows using `filter`.
-* Relevant features of the dataset: `r nrow(baseline_df)` participants were recruited, and of these `r sum(baseline_df$age_at_onset != '.')` developed MCI. The average baseline age is `r mean(baseline_df$current_age) |> round(2)`. A proportion of `r ((sum(baseline_df$sex == 0 & baseline_df$apoe4 ==1)/sum(baseline_df$sex == 0))*100) |> round(2)` % of women in the study are APOE4 carriers.
+* Relevant features of the dataset: `r nrow(baseline_df)` participants were recruited, and of these `r sum(pull(baseline_df, age_at_onset) != '.')` developed MCI. The average baseline age is `r baseline_df |> pull(current_age) |> mean() |> round(2)`. A proportion of `r ((sum(pull(baseline_df, sex) == 0 & pull(baseline_df, apoe4) ==1)/sum(pull(baseline_df, sex) == 0))*100) |> round(2)` % of women in the study are APOE4 carriers.
 
 Similarly, import, clean, and tidy the dataset of longitudinally observed biomarker values; comment on the steps on the import process and the features of the dataset.
 
@@ -235,7 +234,7 @@ Steps on the import process and the features of the dataset.
 
 Check whether some participants appear in only the baseline or amyloid datasets, and comment on your findings. 
 
-* A total of `r length(setdiff(baseline_df$id, amyloid_df$id))` participants appear in only the baseline dataset, and a total of `r length(setdiff(amyloid_df$id, baseline_df$id))` participants appear in only the amyloid dataset. It suggests that there are unique 'id' values in each dataset that are not shared between the two datasets.
+* A total of `r length(setdiff(pull(baseline_df, id), pull(amyloid_df, id)))` participants appear in only the baseline dataset, and a total of `r length(setdiff(pull(amyloid_df, id), pull(baseline_df, id)))` participants appear in only the amyloid dataset. It suggests that there are unique 'id' values in each dataset that are not shared between the two datasets.
 
 Combine the demographic and biomarker datasets so that only participants who appear in both datasets are retained.
 
