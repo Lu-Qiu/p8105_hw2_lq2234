@@ -215,7 +215,7 @@ baseline_df =
 Discuss important steps in the import process and relevant features of the dataset. How many participants were recruited, and of these how many develop MCI? What is the average baseline age? What proportion of women in the study are APOE4 carriers?  
 
 * Important steps include: skipping the first row, changing data type of 'sex' and 'apoe4', removing rows using `filter`.
-* Relevant features of the dataset: `r nrow(baseline_df)` participants were recruited, and of these `r sum(baseline_df$age_at_onset != '.')` developed MCI. The average baseline age is `r mean(baseline_df$current_age) |> round(2)`. A proportion of `r ((sum(baseline_df$sex == 0 & baseline_df$apoe4 ==1)/nrow(baseline_df))*100) |> round(2)` % of women in the study are APOE4 carriers.
+* Relevant features of the dataset: `r nrow(baseline_df)` participants were recruited, and of these `r sum(baseline_df$age_at_onset != '.')` developed MCI. The average baseline age is `r mean(baseline_df$current_age) |> round(2)`. A proportion of `r ((sum(baseline_df$sex == 0 & baseline_df$apoe4 ==1)/sum(baseline_df$sex == 0))*100) |> round(2)` % of women in the study are APOE4 carriers.
 
 Similarly, import, clean, and tidy the dataset of longitudinally observed biomarker values; comment on the steps on the import process and the features of the dataset.
 
@@ -245,7 +245,7 @@ combined_df <- inner_join(baseline_df, amyloid_df, by = "id")
 
 Briefly describe the resulting dataset.
 
-* The resulting dataset has `r nrow(amyloid_df)` observations and `r ncol(amyloid_df)` variables. 
+* The resulting dataset has `r nrow(combined_df)` observations and `r ncol(combined_df)` variables. 
 
 Export the result as a CSV to the data directory.
 
