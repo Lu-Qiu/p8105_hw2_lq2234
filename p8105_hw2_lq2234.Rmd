@@ -222,13 +222,18 @@ Similarly, import, clean, and tidy the dataset of longitudinally observed biomar
 amyloid_df = 
   read_csv('./data/mci_amyloid.csv', skip = 1) |>
   janitor::clean_names() |>
+  pivot_longer(
+    time_2:time_8,
+    names_to = 'time',
+    values_to = 'amyloid_ratio'
+  ) |>
   rename(id = study_id) |>
-  mutate_all(as.numeric)
+  mutate(amyloid_ratio = as.numeric(amyloid_ratio))
 ```
 
 Steps on the import process and the features of the dataset.
 
-* The dataset `amyloid_df` is imported without the first row using arguments in `read_csv`. Then, the column name 'study_id' is changed to 'id' to match with the `baseline_df` dataset. The data type of all values in this dataset is converted to numeric uisng `mutate_all`. Please note that in this step, all 'Na' values in the original dataset are converted to `NA` due to coercion.
+* The dataset `amyloid_df` is imported without the first row using arguments in `read_csv`. Then, `pivot_longer` is used to switch the dataset from “wide” to “long” format. The column name 'study_id' is changed to 'id' to match with the `baseline_df` dataset. The data type of `amyloid_ratio` is converted to numeric using `mutate`. Please note that in this step, all 'Na' values in this column are converted to `NA` due to coercion.
 * The dateset `amyloid_df` has `r nrow(amyloid_df)` observations and `r ncol(amyloid_df)` variables. The names of variables are: `r names(amyloid_df)`.
 
 
